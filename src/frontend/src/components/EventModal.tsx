@@ -35,7 +35,7 @@ const EventModal: React.FC<EventModalProps> = ({ date, event, onClose, onSave, o
       onDelete();
     }
   };
-  
+
   return (
     <div className="modal-overlay">
       <div className="modal-content">

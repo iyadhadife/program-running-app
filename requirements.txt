@@ -1,0 +1,8 @@
+flask
+flask_cors
+numpy
+pandas
+requests
+matplotlib
+cryptography
+mysql-connector-python

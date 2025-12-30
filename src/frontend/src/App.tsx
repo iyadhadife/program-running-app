@@ -1,11 +1,10 @@
-import Calendar from './components/Calendar';
+import Login from './components/Login';
 import './App.css';
 
 function App() {
   return (
     <div>
-      <h1>Calendrier d'événements sportifs</h1>
-      <Calendar />
+      <Login />
     </div>
   );
 }
