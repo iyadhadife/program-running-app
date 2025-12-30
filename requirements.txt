@@ -6,3 +6,4 @@ requests
 matplotlib
 cryptography
 mysql-connector-python
+flask_cors

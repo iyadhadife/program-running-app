@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './Calendar.css';
 import EventModal from './EventModal';
 
+// Assure-toi que ton type ressemble à ça dans types.ts
+// export interface CalendarEvent { id: number; title: string; description?: string; date: Date; }
 import type { CalendarEvent } from '../types';
 
-const Calendar: React.FC = () => {
+interface CalendarProps {
+  userEmail: string;
+}
+
+const Calendar: React.FC<CalendarProps> = ({ userEmail }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -12,6 +18,27 @@ const Calendar: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
   const daysOfWeek = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+  const API_URL = 'http://127.0.0.1:5000'; // L'adresse de ton backend Flask
+
+  // --- 1. CHARGEMENT DES DONNÉES (GET) ---
+  useEffect(() => {
+    if (userEmail) {
+      fetch(`${API_URL}/events?email=${userEmail}`)
+        .then(res => res.json())
+        .then(data => {
+          // IMPORTANT : MySQL renvoie des dates en String ("2024-01-01").
+          // React a besoin d'objets Date(). On doit convertir.
+          const formattedEvents = data.map((evt: any) => ({
+            id: evt.id,
+            title: evt.title,
+            description: evt.description,
+            date: new Date(evt.date) // On convertit le string SQL en Date JS
+          }));
+          setEvents(formattedEvents);
+        })
+        .catch(err => console.error("Erreur chargement:", err));
+    }
+  }, [userEmail]);
 
   const goToPreviousMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
@@ -40,28 +67,70 @@ const Calendar: React.FC = () => {
     setSelectedEvent(null);
   };
 
-  const handleSaveEvent = (data: { title: string; description: string }) => {
-    if (selectedEvent) {
-      // Edit existing event
-      setEvents(
-        events.map((event) =>
-          event.id === selectedEvent.id ? { ...event, ...data } : event
-        )
-      );
-    } else if (selectedDate) {
-      // Create new event
-      setEvents([
-        ...events,
-        { id: Date.now(), date: selectedDate, ...data },
-      ]);
+  // --- 2. SAUVEGARDE (POST ou PUT) ---
+  const handleSaveEvent = async (data: { title: string; description: string }) => {
+    // Astuce pour garder la bonne date locale au format YYYY-MM-DD pour MySQL
+    const dateToUse = selectedEvent ? selectedEvent.date : selectedDate;
+    if (!dateToUse) return;
+
+    // On compense le décalage horaire pour éviter que le 12 devienne le 11
+    const offset = dateToUse.getTimezoneOffset() * 60000;
+    const localDate = new Date(dateToUse.getTime() - offset);
+    const sqlDate = localDate.toISOString().split('T')[0];
+
+    const payload = { ...data, date: sqlDate, email: userEmail };
+
+    try {
+      if (selectedEvent) {
+        // --- CAS : MODIFICATION (PUT) ---
+        const response = await fetch(`${API_URL}/events/${selectedEvent.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          // Mise à jour locale
+          setEvents(events.map(ev => 
+            ev.id === selectedEvent.id ? { ...ev, ...data } : ev
+          ));
+        }
+      } else {
+        // --- CAS : CRÉATION (POST) ---
+        const response = await fetch(`${API_URL}/events?email=${userEmail}&date=${sqlDate}&description=${encodeURIComponent(data.description)}&title=${encodeURIComponent(data.title)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          const newEventData = await response.json(); // On récupère le nouvel ID
+          setEvents([
+            ...events, 
+            { ...data, id: newEventData.id, date: dateToUse, description: data.description, title: data.title }
+          ]);
+        }
+      }
+      handleCloseModal();
+    } catch (error) {
+      console.error("Erreur sauvegarde:", error);
     }
-    handleCloseModal();
   };
 
-  const handleDeleteEvent = () => {
+  // --- 3. SUPPRESSION (DELETE) ---
+  const handleDeleteEvent = async () => {
     if (selectedEvent) {
-      setEvents(events.filter(event => event.id !== selectedEvent.id));
-      handleCloseModal();
+      try {
+        await fetch(`${API_URL}/events/${selectedEvent.id}?email=${userEmail}`, {
+          method: 'DELETE',
+        });
+        
+        // Si la BDD a supprimé, on supprime de l'affichage
+        setEvents(events.filter(event => event.id !== selectedEvent.id));
+        handleCloseModal();
+      } catch (error) {
+        console.error("Erreur suppression:", error);
+      }
     }
   };
 
@@ -78,6 +147,8 @@ const Calendar: React.FC = () => {
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dayDate = new Date(year, month, day);
+      
+      // Filtrage corrigé pour comparer correctement les dates
       const dayEvents = events.filter(
         (event) => event.date.toDateString() === dayDate.toDateString()
       );
@@ -137,4 +208,3 @@ const Calendar: React.FC = () => {
 };
 
 export default Calendar;
-

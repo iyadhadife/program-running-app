@@ -1,6 +1,7 @@
 import mysql.connector
 from mysql.connector import Error
 from os import environ as env
+from flask import jsonify
 
 def get_users():
     connection = None
@@ -177,9 +178,164 @@ def get_password(email):
             connection.close()
     get_users()
 
-if __name__ == "__main__":
+def create_event(email, title, description, date):
+    connection = None
+    cursor = None
+
+    try:
+        connection = mysql.connector.connect(
+            host='localhost',
+            database='db',
+            user='root',
+            password=env.get('DB_PASSWORD', 'root'),
+            port=3306
+        )
+
+        if connection.is_connected():
+            print("Connexion réussie à MySQL")
+            cursor = connection.cursor()
+
+            # --- PARTIE 1 : Insérer l'événement ---
+            query = "INSERT INTO event (title, description, date) VALUES (%s, %s, %s)"
+            values = (title, description, date)
+            
+            cursor.execute(query, values)
+
+            # --- MAGIE ICI : Récupérer l'ID généré ---
+            new_event_id = cursor.lastrowid
+            print(f"L'ID généré pour cet événement est : {new_event_id}")
+            
+            # --- PARTIE 2 : Lier à l'utilisateur ---
+            query2 = "INSERT INTO SportiveEvents (email_user, id_event) VALUES (%s, %s)"
+            values2 = (email, new_event_id)
+
+            cursor.execute(query2, values2)
+
+            # --- VALIDATION ---
+            connection.commit()
+            print("Tout a été enregistré avec succès !")
+            return jsonify({'id': new_event_id})
+
+    except Error as e:
+        if connection:
+            connection.rollback()
+        return jsonify({"error": f"Erreur lors de l'opération : {e}"}, 500)
+
+    finally:
+        if connection and connection.is_connected():
+            cursor.close()
+            connection.close()
+
+def get_events(email):
+    connection = None
+    cursor = None
+
+    try:
+        # 1. Établir la connexion
+        connection = mysql.connector.connect(
+            host='localhost',
+            database='db',
+            user='root',
+            password=env.get('DB_PASSWORD', 'root'),
+            port=3306
+        )
+
+        if connection.is_connected():
+            print("Connexion réussie à MySQL")
+
+            # 2. Créer un curseur
+            cursor = connection.cursor(dictionary=True)
+
+            # 3. Écrire la requête SQL
+            query = "SELECT event.* FROM event JOIN SportiveEvents ON event.id = SportiveEvents.id_event WHERE SportiveEvents.email_user = %s"
+            values = (email,)
+
+            # 4. Exécuter la requête
+            cursor.execute(query, values)
+
+            # 5. Récupérer les résultats
+            events = cursor.fetchall()
+
+            formatted_events = []
+            for event in events:
+                formatted_events.append({
+                    "id": event['id'],
+                    "title": event['title'],
+                    "description": event['description'],
+                    "date": str(event['date'])
+                })
+            print(f"Événements pour {email} : {formatted_events}")
+            return jsonify(formatted_events)
+
+    except Error as e:
+        return jsonify({"error": f"Erreur lors de la connexion : {e}"}, 500)
+
+    finally:
+        # 6. Toujours fermer la connexion
+        if connection and connection.is_connected():
+            cursor.close()
+            connection.close()
+    
+    return jsonify([])
+
+def delete_event(email, id_event):
+    connection = None
+    cursor = None
+    
+    try:
+        # 1. Établir la connexion
+        connection = mysql.connector.connect(
+            host='localhost',
+            database='db',
+            user='root',
+            password=env.get('DB_PASSWORD', 'root'),
+            port=3306
+        )
+
+        if connection.is_connected():
+            print("Connexion réussie à MySQL")
+
+            # 2. Créer un curseur
+            cursor = connection.cursor()
+
+            # 3. Écrire les requêtes SQL (dans le bon ordre)
+            
+            # D'abord, on supprime la liaison dans la table SportiveEvents
+            query_sportive_events = "DELETE FROM SportiveEvents WHERE email_user = %s AND id_event = %s"
+            values_sportive_events = (email, id_event)
+            
+            # Ensuite, on supprime l'événement lui-même de la table event
+            query_event = "DELETE FROM event WHERE id = %s"
+            values_event = (id_event,)
+
+            # 4. Exécuter les requêtes
+            cursor.execute(query_sportive_events, values_sportive_events)
+            cursor.execute(query_event, values_event)
+            
+            # 5. Valider les changements
+            connection.commit()
+
+            print(f"Événement avec ID {id_event} pour l'utilisateur {email} supprimé avec succès.")
+            return f"Événement avec ID {id_event} pour l'utilisateur {email} supprimé avec succès."
+
+    except Error as e:
+        if connection:
+            connection.rollback()
+        return f"Erreur lors de la suppression : {e}"
+
+    finally:
+        # 6. Toujours fermer la connexion
+        if connection and connection.is_connected():
+            cursor.close()
+            connection.close()
+            print("Connexion MySQL fermée")    
+
+
+# if __name__ == "__main__":
     # Exemple d'utilisation
-    create_user('aasaqsa@gmail.com', 'ihadi', '1234')
-    get_users()
-    get_password('aasaqsa@gmail.com')
-    delete_user('aasaqsa@gmail.com')
+    # create_user('aasaqsa@gmail.com', 'ihadi', '1234')
+    # get_users()
+    # get_password('aasaqsa@gmail.com')
+    # delete_user('aasaqsa@gmail.com')
+    # delete_event('ihadife@hotmail.com', 2)  # Exemple d'appel à delete_event
+# create_event('ihadife@hotmail.com', 'Test Event', 'Description of the test event', '2025-10-15')
