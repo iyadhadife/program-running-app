@@ -26,6 +26,7 @@ const Calendar: React.FC<CalendarProps> = ({ userEmail }) => {
       fetch(`${API_URL}/events?email=${userEmail}`)
         .then(res => res.json())
         .then(data => {
+          console.log('Data received from backend:', data);
           // IMPORTANT : MySQL renvoie des dates en String ("2024-01-01").
           // React a besoin d'objets Date(). On doit convertir.
           const formattedEvents = data.map((evt: any) => ({
@@ -97,7 +98,7 @@ const Calendar: React.FC<CalendarProps> = ({ userEmail }) => {
         }
       } else {
         // --- CAS : CRÉATION (POST) ---
-        const response = await fetch(`${API_URL}/events?email=${userEmail}&date=${sqlDate}&description=${encodeURIComponent(data.description)}&title=${encodeURIComponent(data.title)}`, {
+        const response = await fetch(`${API_URL}/events`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),

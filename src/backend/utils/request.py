@@ -2,6 +2,7 @@ import mysql.connector
 from mysql.connector import Error
 from os import environ as env
 from flask import jsonify
+from crypto.library.hash import _calculate_sha256
 
 def get_users():
     connection = None
@@ -69,7 +70,7 @@ def create_user(email, name, password):
 
             # 3. Écrire la requête SQL
             query = "INSERT INTO user (email, name, password) VALUES (%s, %s, %s)"
-            values = (email, name, password)
+            values = (email, name, password) #_calculate_sha256(password.encode('utf-8')))
             
             # 4. Exécuter la requête
             cursor.execute(query, values)
@@ -162,7 +163,6 @@ def get_password(email):
             result = cursor.fetchone()
 
             if result:
-                print(f"Mot de passe pour {email} : {result['password']}")
                 return result['password']
             else:
                 print(f"Aucun utilisateur trouvé avec l'email {email}")
@@ -255,6 +255,7 @@ def get_events(email):
 
             # 5. Récupérer les résultats
             events = cursor.fetchall()
+            print(f"Événements récupérés de la base de données : {events}")
 
             formatted_events = []
             for event in events:
@@ -333,7 +334,7 @@ def delete_event(email, id_event):
 
 # if __name__ == "__main__":
     # Exemple d'utilisation
-    # create_user('aasaqsa@gmail.com', 'ihadi', '1234')
+# create_user('aasaqsa@gmail.com', 'ihadi', '1234')
     # get_users()
     # get_password('aasaqsa@gmail.com')
     # delete_user('aasaqsa@gmail.com')
