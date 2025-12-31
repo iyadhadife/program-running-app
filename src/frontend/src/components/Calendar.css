@@ -3,7 +3,8 @@
   border: 1px solid #ccc;
   border-radius: 4px;
   padding: 10px;
-  max-width: 900px;
+  width: 90vw; /* Taille fixe basée sur la largeur de l'écran */
+  max-width: 1000px; /* Limite pour les très grands écrans */
   margin: 0 auto;
 }
 
@@ -26,13 +27,15 @@
 
 .calendar-day {
   border: 1px solid #eee;
-  padding: 10px;
+  padding: 5px;
   text-align: center;
-  min-height: 80px;
+  aspect-ratio: 1 / 1;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
+  overflow: hidden; /* Empêche la case de s'agrandir si le contenu déborde */
+  min-width: 0; /* Évite les problèmes de débordement flexbox */
 }
 
 .calendar-day.weekday {
@@ -52,6 +55,8 @@
 .events {
   margin-top: 5px;
   width: 100%;
+  overflow-y: auto; /* Permet de défiler à l'intérieur de la case si trop d'événements */
+  flex: 1;
 }
 
 .event {

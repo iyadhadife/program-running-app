@@ -331,6 +331,66 @@ def delete_event(email, id_event):
             connection.close()
             print("Connexion MySQL fermée")    
 
+def get_user(email):
+    connection = None
+    cursor = None
+    try:
+        connection = mysql.connector.connect(
+            host='localhost',
+            database='db',
+            user='root',
+            password=env.get('DB_PASSWORD', 'root'),
+            port=3306
+        )
+        if connection.is_connected():
+            cursor = connection.cursor(dictionary=True)
+            query = "SELECT name, email FROM user WHERE email = %s"
+            cursor.execute(query, (email,))
+            return cursor.fetchone()
+    except Error as e:
+        print(f"Erreur: {e}")
+        return None
+    finally:
+        if connection and connection.is_connected():
+            cursor.close()
+            connection.close()
+
+def update_user(current_email, updates):
+    if not updates:
+        return "Aucune modification détectée."
+    
+    connection = None
+    cursor = None
+    try:
+        connection = mysql.connector.connect(
+            host='localhost',
+            database='db',
+            user='root',
+            password=env.get('DB_PASSWORD', 'root'),
+            port=3306
+        )
+        if connection.is_connected():
+            cursor = connection.cursor()
+            
+            # Construction dynamique de la requête SET
+            set_clause = ", ".join([f"{k} = %s" for k in updates.keys()])
+            values = list(updates.values())
+            values.append(current_email) # Pour le WHERE email = %s
+            
+            query = f"UPDATE user SET {set_clause} WHERE email = %s"
+            cursor.execute(query, tuple(values))
+            
+            connection.commit()
+            return "Profil mis à jour avec succès."
+    except Error as e:
+        print(f"Erreur lors de la mise à jour : {e}")
+        return f"Erreur lors de la mise à jour : {e}"
+    finally:
+        if connection and connection.is_connected():
+            cursor.close()
+            connection.close()
+            print("Connexion MySQL fermée")
+
 
 # if __name__ == "__main__":
     # Exemple d'utilisation

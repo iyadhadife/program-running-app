@@ -4,9 +4,10 @@ interface HeaderProps {
   onLogout: () => void;
   onToggleDarkMode: () => void;
   isDarkMode: boolean;
+  onNavigate: (view: 'calendar' | 'profile') => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onLogout, onToggleDarkMode, isDarkMode }) => {
+const Header: React.FC<HeaderProps> = ({ onLogout, onToggleDarkMode, isDarkMode, onNavigate }) => {
   return (
     <header style={{ 
       position: 'sticky',
@@ -29,10 +30,10 @@ const Header: React.FC<HeaderProps> = ({ onLogout, onToggleDarkMode, isDarkMode 
       }}>
         Calendrier des événements sportifs
       </h1>
-      <nav style={{ display: 'flex', gap: '0.5rem', alignItems: 'left' }}>
-        <button>Accueil</button>
+      <nav style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <button onClick={() => onNavigate('calendar')}>Accueil</button>
         <button>Activités</button>
-        <button onClick={() => alert('Changer le profil (à implémenter)')}>Changer Profil</button>
+        <button onClick={() => onNavigate('profile')}>Changer Profil</button>
         <button onClick={onToggleDarkMode}>
           {isDarkMode ? '☀️ Mode Clair' : '🌙 Mode Sombre'}
         </button>

@@ -1,7 +1,7 @@
 import flask
 from flask import Flask, request, jsonify
 from flask_cors import CORS  # Import CORS
-from utils.request import create_user, get_password, get_events, create_event, delete_event as delete_event_from_db
+from utils.request import create_user, get_password, get_events, create_event, delete_event as delete_event_from_db, get_user, update_user
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -93,6 +93,20 @@ def delete_event_route(id_event):
         return jsonify({"message": result}), 200
     else:
         return jsonify({"message": result}), 500
+
+@app.route('/user/<email>', methods=['GET'])
+def get_user_info(email):
+    user = get_user(email)
+    if user:
+        return jsonify(user), 200
+    return jsonify({"message": "Utilisateur non trouvé"}), 404
+
+@app.route('/user/<email>', methods=['PUT'])
+def update_user_info(email):
+    data = request.get_json()
+    # L'email actuel est passé dans l'URL, les modifications dans le body
+    result = update_user(email, data)
+    return jsonify({"message": result}), 200
    
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
